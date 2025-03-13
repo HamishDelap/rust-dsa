@@ -42,7 +42,6 @@ fn insert(x: String, bloom_filter: &mut BloomFilter) {
         println!("hash - {}", new_hash);
         bloom_filter[byte_index as usize] |= new_hash;
     }
-    debug_to_filter(bloom_filter);
 }
 
 fn lookup(x: String, bloom_filter: &mut BloomFilter) -> bool {
