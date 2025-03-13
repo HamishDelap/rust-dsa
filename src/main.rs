@@ -3,10 +3,17 @@ use std::io::{self, Write};
 use std::io::Cursor;
 use murmur3::murmur3_32;
 
+use std::fs::File;
+
 const M : usize = 1024;
 const K : u32 = 35;
 
-type BloomFilter = [u8; M];
+type BloomFilter = [u8; M / 8];
+
+fn debug_to_filter(bloom_filter: &mut BloomFilter) {
+    let mut file = File::create("debug.bin").unwrap();
+    file.write_all(bloom_filter).unwrap();
+}
 
 fn get_input(msg : String) -> String {
     print!("{}", msg);
@@ -29,14 +36,21 @@ fn hash_string(x: String) -> [u32; K as usize] {
 fn insert(x: String, bloom_filter: &mut BloomFilter) {
     let hashes = hash_string(x);
     for i in hashes {
-        bloom_filter[i as usize] = 1;
+        let byte_index : u32 = (bloom_filter.len() as u32) - (i / 8);
+        println!("index {}", byte_index);
+        let new_hash : u8 = 0x01 << i % 8;
+        println!("hash - {}", new_hash);
+        bloom_filter[byte_index as usize] |= new_hash;
     }
+    debug_to_filter(bloom_filter);
 }
 
 fn lookup(x: String, bloom_filter: &mut BloomFilter) -> bool {
     let hashes = hash_string(x);
     for i in hashes {
-        if bloom_filter[i as usize] == 0 {
+        let byte_index : u32 = (bloom_filter.len() as u32) - (i / 8);
+        let hash : u8 = 0x01 << i % 8;
+        if bloom_filter[byte_index as usize] & hash == 0 {
             return false;
         }
     }
@@ -65,7 +79,7 @@ lookup [string] - lookup [string] in filter
 exit            - exit program
 ===========================================");
 
-    let mut bloom_filter : BloomFilter = [0; M];
+    let mut bloom_filter : BloomFilter = [0; M / 8];
    
     let mut user_input : String = String::from("");
     while user_input != "exit" {
@@ -74,7 +88,8 @@ exit            - exit program
         match user_input.clone().to_lowercase().as_str() {
             "insert" => handle_insert(&mut bloom_filter),
             "lookup" => handle_lookup(&mut bloom_filter),
-            "exit" => (),
+            "debug"  => debug_to_filter(&mut bloom_filter),
+            "exit"   => (),
             _ => println!("Unrecognized command :(")
         }
 
